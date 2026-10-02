@@ -122,7 +122,15 @@
   const readQ = () => { try { return JSON.parse(localStorage.getItem(QKEY) || "[]"); } catch { return []; } };
   const writeQ = (q) => { try { localStorage.setItem(QKEY, JSON.stringify(q)); } catch {} };
   function queue(row) { const q = readQ(); q.push(row); writeQ(q); flush(); }
+  // um envio por vez: dois envios simultâneos liam a mesma fila e duplicavam linhas
+  let flushing = false, flushAgain = false;
   async function flush() {
+    if (flushing) { flushAgain = true; return; }
+    flushing = true;
+    try { await flushOnce(); } finally { flushing = false; }
+    if (flushAgain) { flushAgain = false; flush(); }
+  }
+  async function flushOnce() {
     const q = readQ();
     if (!q.length) { T.sendState = "enviado"; render(); return; }
     if (!CFG.supabaseUrl || !CFG.supabaseAnonKey) { T.sendState = "local"; render(); return; }
@@ -138,7 +146,9 @@
         if (!r.ok) rest.push(row);
       } catch { rest.push(row); }
     }
-    writeQ(rest);
+    // mantém o que entrou na fila durante o envio
+    const sent = new Set(q.filter((r) => !rest.includes(r)).map((r) => JSON.stringify(r)));
+    writeQ(readQ().filter((r) => !sent.has(JSON.stringify(r))));
     T.sendState = rest.length ? "erro" : "enviado";
     render();
   }
@@ -676,10 +686,11 @@
   function bindSwipe() {
     const track = document.getElementById("swipe"), knob = document.getElementById("knob");
     if (!track || !knob) return;
+    // o arraste começa em qualquer ponto da trilha, não só no círculo
     let x0 = null, dx = 0;
     const max = () => track.clientWidth - knob.clientWidth - 10;
-    knob.addEventListener("pointerdown", (e) => { x0 = e.clientX; knob.setPointerCapture(e.pointerId); knob.style.transition = "none"; });
-    knob.addEventListener("pointermove", (e) => { if (x0 == null) return; dx = Math.max(0, Math.min(max(), e.clientX - x0)); knob.style.transform = `translateX(${dx}px)`; });
+    track.addEventListener("pointerdown", (e) => { x0 = e.clientX; track.setPointerCapture(e.pointerId); knob.style.transition = "none"; });
+    track.addEventListener("pointermove", (e) => { if (x0 == null) return; dx = Math.max(0, Math.min(max(), e.clientX - x0)); knob.style.transform = `translateX(${dx}px)`; });
     const end = () => {
       if (x0 == null) return;
       x0 = null; knob.style.transition = "transform .2s";
@@ -687,7 +698,7 @@
       else { knob.style.transform = "translateX(0)"; if (dx < 6) toast("Arraste o círculo até o fim para confirmar."); }
       dx = 0;
     };
-    knob.addEventListener("pointerup", end); knob.addEventListener("pointercancel", end);
+    track.addEventListener("pointerup", end); track.addEventListener("pointercancel", end);
   }
 
   /* ---------- início ---------- */

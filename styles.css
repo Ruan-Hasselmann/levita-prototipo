@@ -149,7 +149,7 @@ input { font: inherit; color: inherit; }
 .choice b { display: block; font-size: 14px; } .choice small { color: var(--soft); font-size: 12.5px; }
 
 /* toast */
-.toast { position: absolute; left: 16px; right: 16px; bottom: 96px; z-index: 40; background: var(--text); color: var(--bg); border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; animation: up .2s ease; }
+.toast { pointer-events: none; position: absolute; left: 16px; right: 16px; top: calc(14px + env(safe-area-inset-top, 0px)); z-index: 40; background: var(--text); color: var(--bg); border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; animation: up .2s ease; }
 
 /* grade do líder */
 .grid { display: grid; grid-template-columns: 64px repeat(4, 1fr); gap: 5px; font-size: 11px; }
@@ -191,7 +191,13 @@ input { font: inherit; color: inherit; }
 /* modo teste */
 .taskbar { position: absolute; top: 0; left: 0; right: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px; padding-top: calc(6px + env(safe-area-inset-top, 0px)); background: rgba(124,92,255,.95); color: #fff; font-size: 12px; }
 .taskbar button { background: rgba(255,255,255,.2); border-radius: 99px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #fff; }
+.taskbar span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+.taskbar button { flex: none; }
 .has-taskbar .screen { padding-top: 52px; }
+.has-taskbar .wa-screen { padding-top: 34px; }
+.has-taskbar .full-ticket { top: 34px; }
+.has-taskbar .toast { top: 46px; }
+.swipe { cursor: grab; }
 .overlay { position: absolute; inset: 0; z-index: 60; background: var(--bg); display: flex; flex-direction: column; padding: 28px 22px; overflow-y: auto; }
 .taskcard { background: var(--hero); border: 1px solid var(--line); border-radius: 22px; padding: 20px; margin: 18px 0; }
 .taskcard p { font-size: 19px; font-family: var(--display); font-weight: 600; line-height: 1.3; margin: 8px 0 0; }
