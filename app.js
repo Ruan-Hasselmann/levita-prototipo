@@ -53,7 +53,16 @@
       role, screen, sheet: null, toast: null, full: false,
       igreja: { nome: "", cidade: "", papel: "Pastor(a)" },
       cultos: new Set(["Domingo 10h", "Domingo 19h"]), grupos: new Set(["Louvor", "Mídia"]),
-      formacao: { "🎤 Vocal": 2, "🎸 Violão": 1, "🎹 Teclado": 1, "🥁 Bateria": 1, "🎸 Baixo": 0 },
+      formacao: {
+        Louvor: { "🎤 Vocal": 2, "🎸 Violão": 1, "🎹 Teclado": 1, "🥁 Bateria": 1, "🎸 Baixo": 0 },
+        Mídia: { "🖥 Projeção": 1, "🎥 Câmera": 1, "📡 Transmissão": 1 },
+        Recepção: { "🚪 Porta": 2, "🪑 Acomodação": 2 },
+        Infantil: { "👩‍🏫 Professor(a)": 2, "🤲 Auxiliar": 1 },
+        Cantina: { "☕ Atendimento": 2, "🧁 Cozinha": 1 },
+        Intercessão: { "🙏 Intercessor(a)": 2 },
+        Som: { "🎚 Mesa de som": 1, "🎙 Microfones": 1 },
+      },
+      fgrupo: "Louvor",
       prazo: 25, publica: 28,
       dados: { nome: "Ana Beatriz Souza", cel: "(11) 98765-4321", nasc: "", lgpd: false },
       dias: new Set(["QUA", "DOM"]), padrao: new Set(["Qua · 20h", "Dom · 10h"]),
@@ -64,6 +73,12 @@
     };
   }
   const setScreen = (screen) => { S.screen = screen; S.sheet = null; S.full = false; };
+  function faltaDados() {
+    const f = [];
+    if (!S.dados.nasc.trim()) f.push("data de nascimento");
+    if (!S.dados.lgpd) f.push("aceitar os termos");
+    return f.length ? "Falta: " + f.join(" e ") : "";
+  }
 
   /* ---------- modo teste ---------- */
   const TASKS = {
@@ -200,7 +215,7 @@
         <div class="field"><label for="f-nome">Nome da igreja</label><input id="f-nome" data-f="igreja.nome" placeholder="Ex.: Igreja Videira" value="${esc(S.igreja.nome)}" autocomplete="off"></div>
         <div class="field"><label for="f-cidade">Cidade</label><input id="f-cidade" data-f="igreja.cidade" placeholder="Ex.: Campinas · SP" value="${esc(S.igreja.cidade)}" autocomplete="off"></div>
         <div class="field"><label>Você é</label><div class="chips">${["Pastor(a)", "Secretaria", "Líder"].map((p) => `<button class="chip ${S.igreja.papel === p ? "on" : ""}" data-a="papel" data-v="${p}">${p}</button>`).join("")}</div></div>
-        <div class="bottom"><button class="btn" data-a="go" data-v="w2" ${S.igreja.nome.trim() ? "" : "disabled"} id="b-w1">Continuar</button></div>
+        <div class="bottom"><p class="hint" id="hint-w1">${S.igreja.nome.trim() ? "" : "Falta: nome da igreja"}</p><button class="btn" data-a="go" data-v="w2" ${S.igreja.nome.trim() ? "" : "disabled"} id="b-w1">Continuar</button></div>
       </div>`,
     w2: () => `
       <div class="screen full">
@@ -219,14 +234,20 @@
         <div class="chips">${[["Louvor", "🎶 Louvor"], ["Mídia", "🎥 Mídia"], ["Recepção", "🤝 Recepção"], ["Infantil", "🧸 Infantil"], ["Cantina", "☕ Cantina"], ["Intercessão", "🙏 Intercessão"], ["Som", "🔊 Som"]].map(([v, l]) => chip(S.grupos, v, l)).join("")}</div>
         <div class="bottom"><button class="btn" data-a="go" data-v="w4" ${S.grupos.size ? "" : "disabled"}>Continuar · ${S.grupos.size} grupos</button><button class="btn ghost" data-a="go" data-v="w4">Pular, faço depois</button></div>
       </div>`,
-    w4: () => `
+    w4: () => {
+      const grupos = [...S.grupos].filter((g) => S.formacao[g]);
+      if (!grupos.includes(S.fgrupo)) S.fgrupo = grupos[0] || "Louvor";
+      const f = S.formacao[S.fgrupo];
+      return `
       <div class="screen full">
-        ${steps(4)}<div class="eyebrow">Passo 4 de 5 · Louvor</div>
-        <h1 class="h2">Quantas pessoas servem em cada culto? <button class="pill-tag t-acc" data-a="toast" data-v="Exemplo: no Louvor, 2 vocais e 1 baterista por culto. O líder pode mudar depois." aria-label="Ajuda">?</button></h1>
-        <p class="why">Assim o Levita sabe quantas vagas preencher. Os outros grupos usam o sugerido.</p>
-        ${Object.entries(S.formacao).map(([f, n]) => `<div class="counter"><span>${f}</span><span class="ctl"><button data-a="cnt" data-v="${esc(f)}" data-d="-1" aria-label="Menos">−</button><b>${n}</b><button data-a="cnt" data-v="${esc(f)}" data-d="1" aria-label="Mais">+</button></span></div>`).join("")}
-        <div class="bottom"><button class="btn" data-a="go" data-v="w5">Continuar</button><button class="btn ghost" data-a="go" data-v="w5">Usar o sugerido</button></div>
-      </div>`,
+        ${steps(4)}<div class="eyebrow">Passo 4 de 5</div>
+        <h1 class="h2">Quantas pessoas servem em cada culto? <button class="pill-tag t-acc" data-a="toast" data-v="Exemplo: no Louvor, 2 vocais e 1 baterista por culto. O líder de cada grupo pode mudar depois." aria-label="Ajuda">?</button></h1>
+        <p class="why">Assim o Levita sabe quantas vagas preencher. Toque em cada grupo para ajustar.</p>
+        ${grupos.length > 1 ? `<div class="grp-tabs">${grupos.map((g) => `<button class="chip ${g === S.fgrupo ? "on" : ""}" data-a="fgrupo" data-v="${esc(g)}">${esc(g)}</button>`).join("")}</div>` : ""}
+        ${Object.entries(f).map(([fn, n]) => `<div class="counter"><span>${fn}</span><span class="ctl"><button data-a="cnt" data-v="${esc(fn)}" data-d="-1" aria-label="Menos ${esc(fn)}">−</button><b>${n}</b><button data-a="cnt" data-v="${esc(fn)}" data-d="1" aria-label="Mais ${esc(fn)}">+</button></span></div>`).join("")}
+        <div class="bottom"><button class="btn" data-a="go" data-v="w5">Continuar</button><button class="btn ghost" data-a="go" data-v="w5">Pular, o líder ajusta depois</button></div>
+      </div>`;
+    },
     w5: () => `
       <div class="screen full">
         ${steps(5)}<div class="eyebrow">Passo 5 de 5</div>
@@ -238,7 +259,7 @@
           <div class="s"><b>✅ Todos confirmam pelo celular</b><div class="small muted" style="margin-top:4px">e recebem lembrete na véspera</div></div>
         </div>
         <div class="card tint small">Exemplo: a escala de <b>novembro</b> recebe respostas até <b>${S.prazo} de outubro</b>.</div>
-        <div class="bottom"><button class="btn" data-a="concluir">Concluir</button><button class="btn ghost" data-a="concluir">Usar o sugerido</button></div>
+        <div class="bottom"><button class="btn" data-a="concluir">Concluir</button></div>
       </div>`,
     checklist: () => `
       <div class="screen full">
@@ -289,12 +310,12 @@
         <div class="field"><label for="f-dc">Celular (WhatsApp)</label><input id="f-dc" data-f="dados.cel" value="${esc(S.dados.cel)}" inputmode="tel"></div>
         <div class="field"><label for="f-dd">Data de nascimento</label><input id="f-dd" data-f="dados.nasc" placeholder="Ex.: 12/03/1998" value="${esc(S.dados.nasc)}" inputmode="numeric"></div>
         <label class="row small" style="margin-top:4px;cursor:pointer"><button class="ck ${S.dados.lgpd ? "ok" : ""}" data-a="lgpd" aria-label="Aceitar termos">${S.dados.lgpd ? "✓" : ""}</button><span>Li e aceito os <span class="link">termos de uso</span> e a <span class="link">política de privacidade</span></span></label>
-        <div class="bottom"><button class="btn" id="b-dados" data-a="go" data-v="quando" ${S.dados.lgpd && S.dados.nasc.trim() ? "" : "disabled"}>Continuar</button></div>
+        <div class="bottom"><p class="hint" id="hint-dados">${faltaDados()}</p><button class="btn" id="b-dados" data-a="go" data-v="quando" ${S.dados.lgpd && S.dados.nasc.trim() ? "" : "disabled"}>Continuar</button></div>
       </div>`,
     quando: () => `
       <div class="screen full">
         <div class="eyebrow">Passo 2 de 3</div>
-        <div class="card tint" style="margin-top:8px"><div class="eyebrow">Definido pelo líder</div><div style="font-weight:650;margin:4px 0 8px">Marcos te colocou no Louvor como</div><div class="chips"><span class="chip on">🎤 Vocal</span><span class="chip on">🎹 Teclado</span></div></div>
+        <div class="card tint" style="margin-top:8px"><div class="lock">🔒 Definido pelo líder</div><div style="font-weight:650;margin:4px 0 8px">Marcos te colocou no Louvor como</div><div class="row" style="flex-wrap:wrap;gap:8px"><span class="tag">🎤 Vocal</span><span class="tag">🎹 Teclado</span></div></div>
         <h1 class="h2" style="margin-top:18px">Em quais cultos você costuma poder?</h1>
         <p class="why">É o seu padrão. Todo mês ele já vem marcado e você só ajusta.</p>
         <div class="chips">${["Qua · 20h", "Dom · 10h", "Dom · 19h"].map((c) => chip(S.padrao, c)).join("")}</div>
@@ -306,8 +327,10 @@
         <div style="margin:26px auto 0;width:90px;height:90px;border-radius:26px;background:linear-gradient(135deg,#7c5cff,#c084fc);box-shadow:0 0 40px rgba(124,92,255,.5);display:flex;align-items:center;justify-content:center;font-size:38px">🔔</div>
         <h1 class="h2" style="text-align:center;margin-top:18px">Não perca nenhuma escala</h1>
         <p class="why" style="text-align:center">Adicione o Levita à tela inicial para receber lembretes na véspera e no dia.</p>
-        <div class="card small" style="line-height:2">1. Toque em <b>Compartilhar</b> ⬆️<br>2. Toque em <b>Adicionar à Tela de Início</b> ➕<br>3. Abra pelo ícone e ative os avisos</div>
-        <div class="bottom"><button class="btn" data-a="instalado">Já adicionei, ativar avisos</button><button class="btn ghost" data-a="instalado">Agora não</button></div>
+        ${/Android/i.test(navigator.userAgent)
+          ? `<div class="bottom"><button class="btn" data-a="instalado">Instalar o Levita e ativar avisos</button><button class="btn ghost" data-a="instalado">Agora não</button></div>`
+          : `<div class="card small" style="line-height:2">No iPhone:<br>1. Toque em <b>Compartilhar</b> ⬆️ (embaixo, no Safari)<br>2. Toque em <b>Adicionar à Tela de Início</b> ➕<br>3. Abra pelo ícone e ative os avisos</div>
+        <div class="bottom"><button class="btn" data-a="instalado">Já adicionei, ativar avisos</button><button class="btn ghost" data-a="instalado">Agora não</button></div>`}
       </div>`,
 
     /* ===== voluntário: uso diário ===== */
@@ -376,7 +399,7 @@
         <div class="card tint"><div class="row between"><span class="eyebrow" style="color:var(--accent-3)">Etapa 2 · Montar a escala</span><span class="small muted">até 28/out</span></div>
           <b style="display:block;margin:6px 0 10px">${S.enviada ? "Escala enviada para a equipe ✓" : S.grade ? "Escala em preparo" : "Pronta para começar"}</b>
           <button class="btn" style="padding:12px" data-a="go" data-v="grade">${S.enviada ? "Ver escala" : S.grade ? "Continuar montando" : "Montar agora"}</button></div>
-        <button class="card row between" style="width:100%;text-align:left;margin-top:10px;${n ? "border-color:rgba(251,113,133,.45)" : ""}" data-a="go" data-v="pend"><span>⚡ Precisa de você</span>${n ? `<span class="badge" style="font-size:12px;padding:2px 8px">${n}</span>` : `<span class="pill-tag t-ok">tudo certo</span>`}</button>
+        <button class="card row between" style="width:100%;text-align:left;margin-top:10px;${n ? "border-color:rgba(251,113,133,.45)" : ""}" data-a="go" data-v="pend"><span>⚡ Precisa de você</span><span class="row" style="gap:8px">${n ? `<span class="badge" style="font-size:12px;padding:2px 8px">${n}</span>` : `<span class="pill-tag t-ok">tudo certo</span>`}<span class="muted" style="font-size:20px">›</span></span></button>
         <div class="sec">Próximo culto · Dom 6 noite</div>
         <div class="card"><div class="row between"><span><b>5/6</b> confirmados</span><span class="pill-tag t-warn">1 pendente</span></div></div>
       </div>`;
@@ -397,9 +420,10 @@
             const ppl = g[r.id][c];
             const empty = ppl.length < need;
             const warn = r.id === "d2n" && c === "Bateria" && ppl.includes("Pedro");
-            return `<button class="cell ${empty ? "emp" : ""} ${warn ? "warn" : ""} ${S.picked === r.id + c ? "fresh" : ""}" data-a="cell" data-v="${r.id}|${c}" aria-label="${r.l} ${r.s}, ${c}">${empty && !ppl.length ? "+" : ppl.map((p) => ini(p)).join("") + (empty ? "<span style='margin-left:3px'>+</span>" : "")}</button>`;
+            return `<button class="cell ${empty ? "emp" : ""} ${warn ? "warn" : ""} ${S.picked === r.id + c ? "fresh" : ""}" data-a="cell" data-v="${r.id}|${c}" aria-label="${r.l} ${r.s}, ${c}: ${ppl.join(", ") || "vaga sem pessoa"}">${empty && !ppl.length ? "+" : ppl.map((p) => `<span class="nm">${esc(p)}</span>`).join("") + (empty ? "<span class='nm' style='color:var(--accent-2)'>+ vaga</span>" : "")}</button>`;
           }).join("")).join("")}
         </div>
+        <button class="small link" style="margin-top:8px" data-a="toast" data-v="No app completo você rola para ver os 11 cultos de novembro.">Mostrando 5 de 11 cultos · Ver mês inteiro</button>
         ${al.length ? `<div class="card" style="margin-top:12px;border-color:rgba(251,191,36,.45);background:rgba(251,191,36,.07)">${al.map((a) => `<div class="small">⚠ ${a}</div>`).join("")}<div class="small muted" style="margin-top:4px">Toque na célula para ajustar.</div></div>` : `<div class="card" style="margin-top:12px"><span class="small">✓ Nenhum alerta. Tudo pronto para enviar.</span></div>`}
         ${S.enviada ? `<div class="card tint" style="margin-top:12px"><b>✓ Enviada para a equipe</b><div class="small muted">Cada pessoa recebeu um aviso para confirmar.</div><button class="btn wa" style="margin-top:10px;padding:11px" data-a="toast" data-v="Abriria o WhatsApp com a escala formatada para o grupo.">Compartilhar no grupo do WhatsApp</button></div>` : `<div style="margin-top:14px"><button class="btn" data-a="enviar">Enviar para a equipe</button></div>`}`;
       }
@@ -452,7 +476,7 @@
       <h2 class="h2">Não vai dar? Sem problema 🙏</h2>
       <p class="small muted" style="margin:4px 0 12px">Dom 6 · Culto da noite · Vocal</p>
       <div class="eyebrow" style="margin-bottom:8px">Motivo</div>
-      <div class="chips">${["Trabalho", "Saúde", "Viagem", "Família", "Outro"].map((m) => `<button class="chip ${S.motivo === m ? "on" : ""}" data-a="motivo" data-v="${m}">${m}</button>`).join("")}</div>
+      <div class="chips roomy">${["Trabalho", "Saúde", "Viagem", "Família", "Outro"].map((m) => `<button class="chip ${S.motivo === m ? "on" : ""}" data-a="motivo" data-v="${m}">${m}</button>`).join("")}</div>
       <button class="choice ${S.saida === "troca" ? "on" : ""}" data-a="saida" data-v="troca"><b>🔁 Pedir troca a um colega</b><small>Vocais disponíveis nesse culto recebem o pedido. O líder aprova.</small></button>
       <button class="choice ${S.saida === "avisar" ? "on" : ""}" data-a="saida" data-v="avisar"><b>📣 Só avisar o líder</b><small>O líder escolhe quem vai no seu lugar.</small></button>
       <div style="margin-top:16px"><button class="btn" data-a="enviarimprev" ${S.motivo ? "" : "disabled"}>${S.saida === "troca" ? "Enviar pedido de troca" : "Avisar o líder"}</button></div>`,
@@ -497,7 +521,7 @@
       <div style="margin-top:auto;padding-top:16px">
         ${S.imprev ? `<div class="swipe done">${S.imprev === "troca" ? "🔁 Troca pedida · esperando um colega" : "📣 Líder avisado"}</div>`
         : S.conf ? `<div class="swipe done">✓ Presença confirmada</div>`
-        : `<div class="swipe" id="swipe"><div class="knob" id="knob" aria-label="Deslize para confirmar">→</div>Deslize para confirmar</div>`}
+        : `<div class="swipe" id="swipe"><div class="fill"></div><div class="knob" id="knob" role="button" tabindex="0" aria-label="Confirmar presença: deslize, segure ou pressione Enter">→</div><span class="lbl-sw">Deslize ou segure para confirmar</span></div>`}
         ${S.imprev ? "" : `<div class="row" style="margin-top:10px"><button class="btn sec-btn" style="padding:12px;background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.15)" data-a="naoposso" data-v="troca">Pedir troca</button><button class="btn sec-btn" style="padding:12px;background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.15)" data-a="naoposso" data-v="avisar">${S.conf ? "Não posso mais" : "Não posso"}</button></div>`}
       </div>
     </div>`;
@@ -505,7 +529,7 @@
 
   /* navegação */
   const NAVS = {
-    vol: [["home", "🏠", "Início"], ["disp", "🗓", "Quando posso"], ["avisos", "🔔", "Avisos"], ["perfil", "👤", "Perfil"]],
+    vol: [["home", "🏠", "Início"], ["disp", "🗓", "Agenda"], ["avisos", "🔔", "Avisos"], ["perfil", "👤", "Perfil"]],
     lider: [["lhome", "🏠", "Início"], ["grade", "📋", "Escala"], ["equipe", "👥", "Equipe"], ["pend", "⚡", "Pendências"]],
   };
   const NO_NAV = new Set(["entrada", "login", "w1", "w2", "w3", "w4", "w5", "checklist", "wa", "convite", "dados", "quando", "instalar"]);
@@ -607,7 +631,8 @@
     toast: (v) => toast(v),
     papel: (v) => { S.igreja.papel = v; },
     chip: (v, el) => { const set = { cultos: S.cultos, grupos: S.grupos, dias: S.dias, padrao: S.padrao }[el.dataset.set]; set.has(v) ? set.delete(v) : set.add(v); },
-    cnt: (v, el) => { S.formacao[v] = Math.max(0, Math.min(9, S.formacao[v] + Number(el.dataset.d))); },
+    cnt: (v, el) => { const f = S.formacao[S.fgrupo]; f[v] = Math.max(0, Math.min(9, f[v] + Number(el.dataset.d))); },
+    fgrupo: (v) => { S.fgrupo = v; },
     dia: (v, el) => { S[v] = Math.max(1, Math.min(31, S[v] + Number(el.dataset.d))); },
     concluir: () => { setScreen("checklist"); goal(1); },
     lgpd: () => { S.dados.lgpd = !S.dados.lgpd; },
@@ -636,7 +661,7 @@
       goal(5, al.length ? "enviada com alertas: " + al.join("; ") : "enviada sem alertas");
     },
     sheetclose: () => { S.sheet = null; },
-    troca: (v) => { S.pend.troca = v; checkPend(); },
+    troca: (v) => { S.pend.troca = v; toast(v === "aprovada" ? "Troca aprovada. Ana e Lia foram avisadas." : "Troca recusada. Ana foi avisada e continua na escala."); checkPend(); },
     substituto: (v) => { S.pend.naopode = v; toast(v + " recebeu o convite para substituir."); checkPend(); },
     /* modo teste */
     "t-next": () => nextTask(),
@@ -682,25 +707,45 @@
     }
     S[a][b] = val;
     const bw1 = document.getElementById("b-w1");
-    if (bw1) bw1.disabled = !S.igreja.nome.trim();
+    if (bw1) { bw1.disabled = !S.igreja.nome.trim(); document.getElementById("hint-w1").textContent = S.igreja.nome.trim() ? "" : "Falta: nome da igreja"; }
     const bd = document.getElementById("b-dados");
-    if (bd) bd.disabled = !(S.dados.lgpd && S.dados.nasc.trim());
+    if (bd) { bd.disabled = !(S.dados.lgpd && S.dados.nasc.trim()); document.getElementById("hint-dados").textContent = faltaDados(); }
   });
 
   /* deslizar para confirmar (toque e mouse) */
   function bindSwipe() {
     const track = document.getElementById("swipe"), knob = document.getElementById("knob");
     if (!track || !knob) return;
-    // o arraste começa em qualquer ponto da trilha, não só no círculo
-    let x0 = null, dx = 0;
+    // três jeitos de confirmar: deslizar (de qualquer ponto da faixa), segurar 1 segundo, ou Enter/Espaço no teclado
+    let x0 = null, dx = 0, holdTimer = null, done = false;
     const max = () => track.clientWidth - knob.clientWidth - 10;
-    track.addEventListener("pointerdown", (e) => { x0 = e.clientX; track.setPointerCapture(e.pointerId); knob.style.transition = "none"; });
-    track.addEventListener("pointermove", (e) => { if (x0 == null) return; dx = Math.max(0, Math.min(max(), e.clientX - x0)); knob.style.transform = `translateX(${dx}px)`; });
-    const end = () => {
+    const confirmar = (como) => {
+      if (done) return; done = true;
+      clearTimeout(holdTimer);
+      S.conf = true; toast("Presença confirmada ✓");
+      if (T.cur) T.cur.caminho.push({ s: "ingresso", a: como + "-confirmar", t: Math.round((performance.now() - T.cur.t0) / 100) / 10 });
+      render();
+    };
+    const cancelHold = () => { clearTimeout(holdTimer); holdTimer = null; track.classList.remove("holding"); };
+    track.addEventListener("pointerdown", (e) => {
+      x0 = e.clientX; track.setPointerCapture(e.pointerId); knob.style.transition = "none";
+      track.classList.add("holding");
+      holdTimer = setTimeout(() => confirmar("segurou"), 900);
+    });
+    track.addEventListener("pointermove", (e) => {
       if (x0 == null) return;
+      dx = Math.max(0, Math.min(max(), e.clientX - x0));
+      if (dx > 8) cancelHold();
+      knob.style.transform = `translateX(${dx}px)`;
+    });
+    knob.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); confirmar("teclado"); } });
+    const end = () => {
+      if (x0 == null || done) return;
+      const held = holdTimer != null;
+      cancelHold();
       x0 = null; knob.style.transition = "transform .2s";
-      if (dx > max() * 0.85) { S.conf = true; toast("Presença confirmada ✓"); if (T.cur) T.cur.caminho.push({ s: "ingresso", a: "deslizou-confirmar", t: Math.round((performance.now() - T.cur.t0) / 100) / 10 }); render(); }
-      else { knob.style.transform = "translateX(0)"; if (dx < 6) toast("Arraste o círculo até o fim para confirmar."); }
+      if (dx > max() * 0.85) confirmar("deslizou");
+      else { knob.style.transform = "translateX(0)"; if (dx < 8 && held) toast("Deslize até o fim ou segure por 1 segundo para confirmar."); }
       dx = 0;
     };
     track.addEventListener("pointerup", end); track.addEventListener("pointercancel", end);
