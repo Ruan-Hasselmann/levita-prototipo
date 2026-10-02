@@ -573,6 +573,7 @@
   }
 
   /* ---------- render ---------- */
+  let lastKey = "";
   function render() {
     const active = document.activeElement;
     const focusId = active && active.id;
@@ -587,6 +588,10 @@
     if (S.toast) html += `<div class="toast" role="status"><span>${esc(S.toast)}</span></div>`;
     if (T.overlay) html += overlay();
     device.innerHTML = html;
+    // anima só quando a tela muda; redesenhos na mesma tela não piscam
+    const key = S.screen + (S.full ? "/ingresso" : "");
+    device.classList.toggle("still", key === lastKey);
+    lastKey = key;
     device.classList.toggle("has-taskbar", !!(T.on && T.cur && !T.cur.done && !T.overlay));
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (caret != null && el.setSelectionRange) try { el.setSelectionRange(caret, caret); } catch {} } }
     bindSwipe();

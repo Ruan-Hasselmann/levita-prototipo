@@ -198,6 +198,7 @@ input { font: inherit; color: inherit; }
 .has-taskbar .full-ticket { top: 34px; }
 .has-taskbar .toast { top: 46px; }
 .swipe { cursor: grab; }
+.still .screen, .still .full-ticket { animation: none; }
 .overlay { position: absolute; inset: 0; z-index: 60; background: var(--bg); display: flex; flex-direction: column; padding: 28px 22px; overflow-y: auto; }
 .taskcard { background: var(--hero); border: 1px solid var(--line); border-radius: 22px; padding: 20px; margin: 18px 0; }
 .taskcard p { font-size: 19px; font-family: var(--display); font-weight: 600; line-height: 1.3; margin: 8px 0 0; }
