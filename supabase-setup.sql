@@ -28,7 +28,7 @@ create policy "inserir resultados" on public.sessoes_teste
 -- 3. Chave do relatório (somente quem tem a chave lê os resultados)
 create table if not exists public.config_relatorio (chave text primary key);
 alter table public.config_relatorio enable row level security;
-insert into public.config_relatorio (chave) values ('LjbTKregOii70irH')
+insert into public.config_relatorio (chave) values ('COLE-AQUI-SUA-CHAVE')
   on conflict do nothing;
 
 create or replace function public.relatorio(p_chave text)
