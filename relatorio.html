@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Levita · Relatório do teste</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { overflow-y: auto; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding-block: 32px 60px; padding-inline: 18px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 18px 0; }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+  .kpi b { display: block; font-family: var(--display); font-size: 26px; font-variant-numeric: tabular-nums; }
+  .kpi span { color: var(--muted); font-size: 12.5px; }
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; background: var(--surface); }
+  td.wrap-cell { white-space: normal; min-width: 220px; }
+  tr:last-child td { border-bottom: 0; }
+  .bar { height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; width: 90px; display: inline-block; vertical-align: middle; margin-right: 8px; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  details summary { cursor: pointer; color: var(--accent-3); font-weight: 600; }
+  .path { font-size: 12px; color: var(--soft); line-height: 1.7; margin-top: 6px; white-space: normal; }
+  .path span { display: inline-block; background: var(--surface-2); border-radius: 6px; padding: 0 6px; margin: 2px 2px 0 0; }
+  .path span.fora { background: rgba(251,113,133,.18); color: var(--bad); }
+  .login { max-width: 420px; margin: 60px auto; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script src="config.js"></script>
+<script>
+(() => {
+  const CFG = window.LEVITA_CONFIG || {};
+  const app = document.getElementById("app");
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const TAREFAS = { 1: "Cadastrar a igreja", 2: "Entrar pelo convite", 3: "Disponibilidade de novembro", 4: "Confirmar e resolver imprevisto", 5: "Montar e enviar a escala", 6: "Resolver pendências" };
+  const fmt = (ms) => { const s = Math.round(ms / 1000); return s < 60 ? s + " s" : Math.floor(s / 60) + " min " + String(s % 60).padStart(2, "0") + " s"; };
+  const median = (a) => { if (!a.length) return 0; const b = [...a].sort((x, y) => x - y), m = Math.floor(b.length / 2); return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
+  const avg = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+  let chave = ""; try { chave = sessionStorage.getItem("levita_chave") || ""; } catch {}
+
+  function loginView(msg) {
+    app.innerHTML = `<div class="login">
+      <div class="eyebrow">Levita · Teste de usabilidade</div>
+      <h1 class="h1" style="margin-top:6px">Relatório</h1>
+      <p class="why">Digite a chave do relatório para ver os resultados.</p>
+      ${!CFG.supabaseUrl ? `<div class="card small" style="border-color:rgba(251,191,36,.45);margin-bottom:12px">⚠ O Supabase ainda não foi configurado em config.js.</div>` : ""}
+      <form id="f"><div class="field"><label for="k">Chave</label><input id="k" autocomplete="off" value="${esc(chave)}"></div>
+      ${msg ? `<p class="small" style="color:var(--bad)">${esc(msg)}</p>` : ""}
+      <button class="btn" type="submit">Ver resultados</button></form></div>`;
+    document.getElementById("f").addEventListener("submit", (e) => { e.preventDefault(); chave = document.getElementById("k").value.trim(); load(); });
+  }
+
+  async function load() {
+    if (!CFG.supabaseUrl || !CFG.supabaseAnonKey) return loginView("Configure o Supabase em config.js primeiro.");
+    app.innerHTML = `<p class="muted" style="margin-top:60px;text-align:center">Carregando resultados…</p>`;
+    try {
+      const r = await fetch(CFG.supabaseUrl.replace(/\/$/, "") + "/rest/v1/rpc/relatorio", {
+        method: "POST",
+        headers: { apikey: CFG.supabaseAnonKey, Authorization: "Bearer " + CFG.supabaseAnonKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ p_chave: chave }),
+      });
+      if (!r.ok) throw new Error("Resposta " + r.status);
+      const rows = await r.json();
+      try { sessionStorage.setItem("levita_chave", chave); } catch {}
+      if (!rows.length) return loginView("Nenhum resultado encontrado. Confira a chave, ou ainda não há testes registrados.");
+      report(rows);
+    } catch (e) { loginView("Não consegui buscar os resultados (" + e.message + "). Verifique a internet e a configuração."); }
+  }
+
+  function report(rows) {
+    const pessoas = [...new Set(rows.map((r) => r.participante))];
+    const conc = rows.filter((r) => r.status === "concluiu").length;
+    const tarefas = [...new Set(rows.map((r) => r.tarefa))].sort((a, b) => a - b);
+    app.innerHTML = `
+      <div class="row between" style="flex-wrap:wrap;gap:12px">
+        <div><div class="eyebrow">Levita · Teste de usabilidade</div><h1 class="h1" style="margin-top:4px">Relatório</h1></div>
+        <button class="btn sec-btn" style="width:auto;padding:10px 16px" id="reload">Atualizar</button>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><b>${pessoas.length}</b><span>participantes</span></div>
+        <div class="kpi"><b>${rows.length}</b><span>tarefas realizadas</span></div>
+        <div class="kpi"><b>${Math.round((conc / rows.length) * 100)}%</b><span>concluídas sem desistir</span></div>
+        <div class="kpi"><b>${avg(rows.filter((r) => r.facilidade).map((r) => r.facilidade)).toFixed(1)}<span style="font-size:14px"> / 5</span></b><span>facilidade média</span></div>
+      </div>
+
+      <div class="sec">Por tarefa</div>
+      <div class="tablewrap"><table>
+        <tr><th>Tarefa</th><th>Pessoas</th><th>Concluíram</th><th>Tempo (mediana)</th><th>Facilidade</th><th>Toques fora (média)</th></tr>
+        ${tarefas.map((t) => {
+          const rs = rows.filter((r) => r.tarefa === t);
+          const ok = rs.filter((r) => r.status === "concluiu").length;
+          const pct = Math.round((ok / rs.length) * 100);
+          const fac = avg(rs.filter((r) => r.facilidade).map((r) => r.facilidade));
+          return `<tr><td><b>${t}.</b> ${esc(TAREFAS[t])}</td><td>${rs.length}</td>
+            <td><span class="bar"><i style="width:${pct}%"></i></span>${pct}% <span class="pill-tag ${pct >= 80 ? "t-ok" : pct >= 50 ? "t-warn" : "t-bad"}">${pct >= 80 ? "bom" : pct >= 50 ? "atenção" : "problema"}</span></td>
+            <td>${fmt(median(rs.map((r) => r.duracao_ms)))}</td>
+            <td>${fac ? fac.toFixed(1) + " / 5" : "—"}</td>
+            <td>${avg(rs.map((r) => r.toques_fora)).toFixed(1)}</td></tr>`;
+        }).join("")}
+      </table></div>
+
+      <div class="sec">Cada tarefa, cada pessoa</div>
+      <div class="tablewrap"><table>
+        <tr><th>Quando</th><th>Participante</th><th>Tarefa</th><th>Resultado</th><th>Tempo</th><th>Facilidade</th><th>Toques / fora</th><th>Observações e caminho</th></tr>
+        ${rows.map((r) => `<tr>
+          <td>${new Date(r.criado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+          <td><b>${esc(r.participante)}</b><div class="small muted">${esc(r.perfil)}</div></td>
+          <td>${r.tarefa}. ${esc(TAREFAS[r.tarefa])}</td>
+          <td><span class="pill-tag ${r.status === "concluiu" ? "t-ok" : "t-bad"}">${r.status === "concluiu" ? "concluiu" : "desistiu"}</span></td>
+          <td>${fmt(r.duracao_ms)}</td>
+          <td>${r.facilidade ? ["😣", "🙁", "😐", "🙂", "😄"][r.facilidade - 1] + " " + r.facilidade : "—"}</td>
+          <td>${r.toques} / ${r.toques_fora}</td>
+          <td class="wrap-cell">${r.observacao ? `<div>${esc(r.observacao)}</div>` : ""}
+            <details><summary>Ver caminho (${(r.caminho || []).length} toques)</summary>
+            <div class="path">${(r.caminho || []).map((c) => `<span class="${c.a === "fora" ? "fora" : ""}" title="${esc(c.s)}">${esc(c.t)}s · ${esc(c.a)}</span>`).join("")}</div></details></td>
+        </tr>`).join("")}
+      </table></div>
+      <p class="small muted" style="margin-top:14px">“Toques fora” são toques em áreas que não fazem nada: um sinal de que a pessoa procurou algo e não achou.</p>`;
+    document.getElementById("reload").addEventListener("click", load);
+  }
+
+  chave ? load() : loginView();
+})();
+</script>
+</body>
+</html>
