@@ -180,7 +180,7 @@
 
   /* ---------- telas ---------- */
   const steps = (n) => `<div class="steps">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= n ? "on" : ""}"></i>`).join("")}</div>`;
-  const chip = (set, val, label = val) => `<button class="chip ${set.has(val) ? "on" : ""}" data-a="chip" data-set="${set === S.cultos ? "cultos" : set === S.grupos ? "grupos" : set === S.dias ? "dias" : "padrao"}" data-v="${esc(val)}">${esc(label)}</button>`;
+  const chip = (set, val, label = val) => `<button class="chip ${set.has(val) ? "on" : ""}" aria-pressed="${set.has(val)}" data-a="chip" data-set="${set === S.cultos ? "cultos" : set === S.grupos ? "grupos" : set === S.dias ? "dias" : "padrao"}" data-v="${esc(val)}">${esc(label)}</button>`;
 
   const V = {
     /* ===== admin: cadastro da igreja ===== */
@@ -214,7 +214,7 @@
         <p class="why">É o nome que os voluntários vão ver no convite.</p>
         <div class="field"><label for="f-nome">Nome da igreja</label><input id="f-nome" data-f="igreja.nome" placeholder="Ex.: Igreja Videira" value="${esc(S.igreja.nome)}" autocomplete="off"></div>
         <div class="field"><label for="f-cidade">Cidade</label><input id="f-cidade" data-f="igreja.cidade" placeholder="Ex.: Campinas · SP" value="${esc(S.igreja.cidade)}" autocomplete="off"></div>
-        <div class="field"><label>Você é</label><div class="chips">${["Pastor(a)", "Secretaria", "Líder"].map((p) => `<button class="chip ${S.igreja.papel === p ? "on" : ""}" data-a="papel" data-v="${p}">${p}</button>`).join("")}</div></div>
+        <div class="field"><label>Você é</label><div class="chips">${["Pastor(a)", "Secretaria", "Líder"].map((p) => `<button class="chip ${S.igreja.papel === p ? "on" : ""}" aria-pressed="${S.igreja.papel === p}" data-a="papel" data-v="${p}">${p}</button>`).join("")}</div></div>
         <div class="bottom"><p class="hint" id="hint-w1">${S.igreja.nome.trim() ? "" : "Falta: nome da igreja"}</p><button class="btn" data-a="go" data-v="w2" ${S.igreja.nome.trim() ? "" : "disabled"} id="b-w1">Continuar</button></div>
       </div>`,
     w2: () => `
@@ -243,7 +243,7 @@
         ${steps(4)}<div class="eyebrow">Passo 4 de 5</div>
         <h1 class="h2">Quantas pessoas servem em cada culto? <button class="pill-tag t-acc" data-a="toast" data-v="Exemplo: no Louvor, 2 vocais e 1 baterista por culto. O líder de cada grupo pode mudar depois." aria-label="Ajuda">?</button></h1>
         <p class="why">Assim o Levita sabe quantas vagas preencher. Toque em cada grupo para ajustar.</p>
-        ${grupos.length > 1 ? `<div class="grp-tabs">${grupos.map((g) => `<button class="chip ${g === S.fgrupo ? "on" : ""}" data-a="fgrupo" data-v="${esc(g)}">${esc(g)}</button>`).join("")}</div>` : ""}
+        ${grupos.length > 1 ? `<div class="grp-tabs">${grupos.map((g) => `<button class="chip ${g === S.fgrupo ? "on" : ""}" aria-pressed="${g === S.fgrupo}" data-a="fgrupo" data-v="${esc(g)}">${esc(g)}</button>`).join("")}</div>` : ""}
         ${Object.entries(f).map(([fn, n]) => `<div class="counter"><span>${fn}</span><span class="ctl"><button data-a="cnt" data-v="${esc(fn)}" data-d="-1" aria-label="Menos ${esc(fn)}">−</button><b>${n}</b><button data-a="cnt" data-v="${esc(fn)}" data-d="1" aria-label="Mais ${esc(fn)}">+</button></span></div>`).join("")}
         <div class="bottom"><button class="btn" data-a="go" data-v="w5">Continuar</button><button class="btn ghost" data-a="go" data-v="w5">Pular, o líder ajusta depois</button></div>
       </div>`;
@@ -476,7 +476,7 @@
       <h2 class="h2">Não vai dar? Sem problema 🙏</h2>
       <p class="small muted" style="margin:4px 0 12px">Dom 6 · Culto da noite · Vocal</p>
       <div class="eyebrow" style="margin-bottom:8px">Motivo</div>
-      <div class="chips roomy">${["Trabalho", "Saúde", "Viagem", "Família", "Outro"].map((m) => `<button class="chip ${S.motivo === m ? "on" : ""}" data-a="motivo" data-v="${m}">${m}</button>`).join("")}</div>
+      <div class="chips roomy">${["Trabalho", "Saúde", "Viagem", "Família", "Outro"].map((m) => `<button class="chip ${S.motivo === m ? "on" : ""}" aria-pressed="${S.motivo === m}" data-a="motivo" data-v="${m}">${m}</button>`).join("")}</div>
       <button class="choice ${S.saida === "troca" ? "on" : ""}" data-a="saida" data-v="troca"><b>🔁 Pedir troca a um colega</b><small>Vocais disponíveis nesse culto recebem o pedido. O líder aprova.</small></button>
       <button class="choice ${S.saida === "avisar" ? "on" : ""}" data-a="saida" data-v="avisar"><b>📣 Só avisar o líder</b><small>O líder escolhe quem vai no seu lugar.</small></button>
       <div style="margin-top:16px"><button class="btn" data-a="enviarimprev" ${S.motivo ? "" : "disabled"}>${S.saida === "troca" ? "Enviar pedido de troca" : "Avisar o líder"}</button></div>`,
